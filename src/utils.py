@@ -47,15 +47,57 @@ def run(cmd: list[str], cwd: str | None = None, timeout: int = 600) -> subproces
 
 
 def ffmpeg(args: list[str], cwd: str | None = None, timeout: int = 900) -> None:
-    if shutil.which("ffmpeg") is None:
-        raise RuntimeError("ffmpeg not found on PATH")
-    run(["ffmpeg", "-y", "-loglevel", "error", *args], cwd=cwd, timeout=timeout)
+    run([_resolve_ffmpeg(), "-y", "-loglevel", "error", *args], cwd=cwd, timeout=timeout)
+
+
+_FFMPEG_EXE: str | None = None
+
+
+def _resolve_ffmpeg() -> str:
+    """Locate ffmpeg once: system PATH first, then the imageio-ffmpeg wheel.
+
+    imageio-ffmpeg (a pip package) ships a static ffmpeg build - the
+    guaranteed fallback on machines with no system ffmpeg, e.g. GitHub
+    Actions runners or a fresh Windows install.
+    """
+    global _FFMPEG_EXE
+    if _FFMPEG_EXE:
+        return _FFMPEG_EXE
+    exe = shutil.which("ffmpeg")
+    if exe is None:
+        try:
+            import imageio_ffmpeg
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            exe = None
+    if exe is None:
+        raise RuntimeError("ffmpeg not found - install it or run: "
+                           "pip install imageio-ffmpeg")
+    _FFMPEG_EXE = exe
+    return exe
+
+
+def ffmpeg_exe() -> str:
+    """Public: the ffmpeg binary this pipeline will use."""
+    return _resolve_ffmpeg()
 
 
 def ffprobe_duration(path: str) -> float:
-    proc = run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                "-of", "csv=p=0", path])
-    return float(proc.stdout.strip())
+    """Media duration in seconds. Uses ffprobe when installed; otherwise
+    parses ffmpeg's decode log (the imageio-ffmpeg static build ships no
+    ffprobe)."""
+    probe = shutil.which("ffprobe")
+    if probe:
+        proc = run([probe, "-v", "error", "-show_entries", "format=duration",
+                    "-of", "csv=p=0", str(path)])
+        return float(proc.stdout.strip())
+    proc = subprocess.run([_resolve_ffmpeg(), "-i", str(path), "-f", "null", "-"],
+                          capture_output=True, text=True, timeout=600)
+    times = re.findall(r"time=(\d+):(\d+):(\d+(?:\.\d+)?)", proc.stderr or "")
+    if not times:
+        raise RuntimeError(f"could not read duration of {path}")
+    h, m, s = times[-1]
+    return int(h) * 3600 + int(m) * 60 + float(s)
 
 
 def clean_text(s: str) -> str:

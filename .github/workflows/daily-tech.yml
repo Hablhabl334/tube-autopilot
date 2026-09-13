@@ -56,7 +56,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          ffmpeg -version | head -1
+          # ubuntu-latest runners ship NO ffmpeg -> install it, and
+          # imageio-ffmpeg (pip) is the built-in fallback either way
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -c "from src.utils import ffmpeg_exe; print('ffmpeg ready:', ffmpeg_exe())"
 
       - name: Run pipeline — tech
         run: python main.py --channel tech

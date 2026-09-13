@@ -1,5 +1,6 @@
 edge-tts>=7.0.0
 feedparser>=6.0.10
+imageio-ffmpeg>=0.5.1
 google-api-python-client>=2.100.0
 google-auth>=2.23.0
 google-auth-oauthlib>=1.1.0
