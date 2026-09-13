@@ -1,0 +1,34 @@
+# Fact Vault — mind-blowing facts Shorts, themed on daily Google trending searches
+display_name: "Fact Vault"
+niche: facts
+category_id: "27"            # Education
+visibility: "public"
+voice: "en-US-AriaNeural"
+voice_rate: "+8%"
+caption_font: "Anton"
+caption_size: 92
+mood: "curious"
+trends:
+  mode: "trends"             # pick one daily trending search, serve themed facts
+  geo: "US"
+  google_news_queries: []
+  max_headlines: 3
+palette:
+  bg_top: "#04101c"
+  bg_mid: "#0b2a46"
+  bg_bottom: "#123a5e"
+  accent: "#35e0ff"
+  text: "#ffffff"
+bokeh: 24
+daily_uploads: 3             # 3 Shorts/day (personal 10k-quota project: 4,950 units)
+engagement_question: "Which fact broke your brain? Comment the number."
+links: []                    # add links later: [{label: ..., url: ...}]
+affiliate: false
+hashtags: ["#facts", "#didyouknow", "#mindblown", "#amazingfacts", "#shorts"]
+music_mood: "curious"
+description_cta: "Follow for a new mind-blowing fact drop every single day."
+cross_promo: "More daily value on our network: @ZenithMindset | @AIChronicleNow | @WealthSignalsHQ"
+title_patterns:
+  - "{n} Facts About {topic} You Won't Believe"
+  - "The Truth About {topic}"
+  - "{n} Things You Didn't Know About {topic}"

@@ -1,0 +1,36 @@
+# AI Chronicle — daily AI/tech news Shorts built from live Google News RSS
+display_name: "AI Chronicle"
+niche: tech
+category_id: "28"            # Science & Technology
+visibility: "public"
+voice: "en-US-ChristopherNeural"
+voice_rate: "+2%"
+caption_font: "Anton"
+caption_size: 92
+mood: "neon"
+trends:
+  mode: "news"               # script is assembled from fresh news headlines
+  google_news_queries:
+    - "AI when:2d"
+    - "artificial intelligence when:2d"
+    - "OpenAI OR Anthropic OR \"AI model\" when:2d"
+  max_headlines: 3
+palette:
+  bg_top: "#0a0614"
+  bg_mid: "#2a1055"
+  bg_bottom: "#3a1a6e"
+  accent: "#b57bff"
+  text: "#ffffff"
+bokeh: 36
+daily_uploads: 3             # 3 Shorts/day (personal 10k-quota project: 4,950 units)
+engagement_question: "Is this AI future exciting or scary? Comments are open."
+links: []                    # add links later: [{label: ..., url: ...}]
+affiliate: false
+hashtags: ["#ai", "#tech", "#ainews", "#artificialintelligence", "#openai", "#shorts"]
+music_mood: "neon"
+description_cta: "Subscribe to stay ahead of every AI breakthrough, every single day."
+cross_promo: "More daily value on our network: @ZenithMindset | @FactVaultHD | @WealthSignalsHQ"
+title_patterns:
+  - "AI Just Changed Again — Here's What's New"
+  - "3 AI Stories You Missed Today"
+  - "This AI Update Changes Everything"

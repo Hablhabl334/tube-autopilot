@@ -1,0 +1,36 @@
+# Wealth Signals — money psychology & finance facts (highest RPM niche)
+display_name: "Wealth Signals"
+niche: money
+category_id: "27"            # Education
+visibility: "public"
+voice: "en-US-AndrewNeural"
+voice_rate: "+0%"
+caption_font: "Anton"
+caption_size: 92
+mood: "wealth"
+trends:
+  mode: "news"
+  google_news_queries:
+    - "personal finance when:2d"
+    - "investing when:2d"
+    - "stock market when:2d"
+  max_headlines: 3
+palette:
+  bg_top: "#03120b"
+  bg_mid: "#0b3d2a"
+  bg_bottom: "#0f4f35"
+  accent: "#2ee06a"
+  text: "#ffffff"
+bokeh: 26
+daily_uploads: 3             # 3 Shorts/day (personal 10k-quota project: 4,950 units)
+engagement_question: "Which money rule do you already follow? Comments below."
+links: []                    # finance affiliate links go here: [{label: ..., url: ...}]
+affiliate: false
+hashtags: ["#money", "#finance", "#moneytips", "#investing", "#wealth", "#shorts"]
+music_mood: "wealth"
+description_cta: "Subscribe for one money rule a day that compounds into wealth."
+cross_promo: "More daily value on our network: @ZenithMindset | @FactVaultHD | @AIChronicleNow"
+title_patterns:
+  - "The Money Rule Schools Never Taught You"
+  - "Why The Rich {angle}"
+  - "3 Money Shifts That Build Real Wealth"
