@@ -51,6 +51,46 @@ def write_script(cfg: dict, topic: dict, rng: random.Random) -> dict:
     return data
 
 
+# Model chain — first model that answers wins and is cached for the process.
+# "gemini-flash-latest" is Google's auto-updating alias (always the newest
+# stable Flash), so the factory keeps working FOREVER even when Google
+# retires a specific version (gemini-2.5-flash was retired for new users in
+# 2026 — exactly the kind of rotation this chain absorbs silently).
+GEMINI_MODELS = [
+    "gemini-flash-latest",     # auto-alias -> newest stable Flash
+    "gemini-3.6-flash",        # current stable Flash (explicit pin)
+    "gemini-2.5-flash",        # legacy pins, kept as dead-man fallbacks
+    "gemini-2.0-flash",
+]
+_working_model: str | None = None
+
+
+def _generate_json(client, prompt: str) -> dict:
+    """generateContent across the model chain; returns parsed JSON.
+
+    Any single model being retired/unavailable just falls through to the
+    next name, so no Google-side model rotation can ever break a video.
+    """
+    global _working_model
+    order = ([_working_model] if _working_model else []) + \
+            [m for m in GEMINI_MODELS if m != _working_model]
+    last_err: Exception | None = None
+    for model in order:
+        try:
+            resp = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config={"response_mime_type": "application/json", "temperature": 1.0},
+            )
+            data = json.loads(resp.text)
+            _working_model = model
+            return data
+        except Exception as e:
+            last_err = e
+            log(f"   ⚠ Gemini model '{model}' unavailable ({type(e).__name__}) — trying next…")
+    raise last_err
+
+
 def _gemini(cfg: dict, topic: dict, key: str, strict: bool, video: bool = False) -> dict:
     from google import genai
 
@@ -95,12 +135,7 @@ Return ONLY valid JSON matching this schema:
 {SCHEMA_HINT}"""
 
     client = genai.Client(api_key=key)
-    resp = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config={"response_mime_type": "application/json", "temperature": 1.0},
-    )
-    return json.loads(resp.text)
+    return _generate_json(client, prompt)
 
 
 def _validate(cfg: dict, data: dict, video: bool = False) -> bool:

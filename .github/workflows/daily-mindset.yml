@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_KEY_MINDSET || secrets.GEMINI_API_KEY }}
       YT_CLIENT_ID_MINDSET: ${{ secrets.YT_CLIENT_ID_MINDSET || secrets.YT_CLIENT_ID }}
       YT_CLIENT_SECRET_MINDSET: ${{ secrets.YT_CLIENT_SECRET_MINDSET || secrets.YT_CLIENT_SECRET }}
       YT_REFRESH_TOKEN_MINDSET: ${{ secrets.YT_REFRESH_TOKEN_MINDSET }}
