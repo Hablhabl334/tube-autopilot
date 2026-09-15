@@ -1,0 +1,29 @@
+name: gemini-diag
+
+# One-shot diagnostic: prints the FULL Gemini API responses/errors for every
+# channel key from a GitHub Actions runner (US region). Run manually only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    name: Gemini key diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install SDK
+        run: pip install google-genai
+      - name: Run diagnostics
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_KEY_MINDSET || secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_FACTS: ${{ secrets.GEMINI_KEY_FACTS }}
+          GEMINI_KEY_TECH: ${{ secrets.GEMINI_KEY_TECH }}
+        run: python tools/gemini_diag.py

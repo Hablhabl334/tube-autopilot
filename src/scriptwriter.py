@@ -87,7 +87,8 @@ def _generate_json(client, prompt: str) -> dict:
             return data
         except Exception as e:
             last_err = e
-            log(f"   ⚠ Gemini model '{model}' unavailable ({type(e).__name__}) — trying next…")
+            log(f"   ⚠ Gemini model '{model}' failed: "
+                f"{str(e).replace(chr(10), ' ')[:180]}")
     raise last_err
 
 
