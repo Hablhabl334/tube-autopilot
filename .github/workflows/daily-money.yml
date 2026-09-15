@@ -1,14 +1,18 @@
 name: daily-money
 
-# CHANNEL 3 — Wealth Signals (personal finance Shorts)
-# 3 posts/day at finance-prime times (15:00 / 19:00 / 23:30 UTC =
-# 10:00 / 14:00 / 18:30 New York — market open, midday, evening planning).
+# CHANNEL — Wealth Signals : 5 posts/day (4 Shorts + 1 long-form video)
+# Slots at 05:45 09:45 13:45 17:45 21:45 UTC.
+# Each trigger ships the NEXT video of the day (slot-aware, no repeats);
+# the day's 5th slot (21:45 UTC) renders as a 16:9 long-form video
+# (= 9:30pm Cairo summer / 5:30pm New York — US evening prime).
 
 on:
   schedule:
-    - cron: "0 15 * * *"
-    - cron: "0 19 * * *"
-    - cron: "30 23 * * *"
+    - cron: "45 5 * * *"
+    - cron: "45 9 * * *"
+    - cron: "45 13 * * *"
+    - cron: "45 17 * * *"
+    - cron: "45 21 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -26,9 +30,9 @@ concurrency:
 
 jobs:
   produce:
-    name: Money daily Short
+    name: Wealth Signals daily post
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       YT_CLIENT_ID_MONEY: ${{ secrets.YT_CLIENT_ID_MONEY || secrets.YT_CLIENT_ID }}

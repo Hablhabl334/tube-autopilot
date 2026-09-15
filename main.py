@@ -21,7 +21,8 @@ from src.config import CHANNEL_IDS, load_channel, work_dir
 from src.utils import is_dry_run, log, step
 
 
-def run_channel(channel_id: str, offline: bool = False, no_upload: bool = False) -> dict:
+def run_channel(channel_id: str, offline: bool = False, no_upload: bool = False,
+                 mode_override: str = "auto") -> dict:
     cfg = load_channel(channel_id)
     work = work_dir(channel_id)
     rng = random.Random()  # fresh entropy daily; banks + seeds keep variety
@@ -34,7 +35,16 @@ def run_channel(channel_id: str, offline: bool = False, no_upload: bool = False)
         return {"channel": channel_id, "video_id": None, "skipped": "daily target reached"}
     slot = done_today + 1
 
-    log(f"\n{'=' * 64}\n🚀  {cfg['display_name']}  ({channel_id}) — video #{slot} of {daily} today\n{'=' * 64}")
+    # slot typing: the day's last upload is the long-form 16:9 video
+    longform_slot = int(cfg.get("longform_slot", 0) or 0)
+    if mode_override != "auto":
+        mode = mode_override
+    else:
+        mode = "video" if (longform_slot and slot >= longform_slot) else "short"
+    cfg["mode"] = mode
+
+    kind = "LONG-FORM VIDEO (16:9)" if mode == "video" else "Short (9:16)"
+    log(f"\n{'=' * 64}\n🚀  {cfg['display_name']}  ({channel_id}) — upload #{slot} of {daily} today — {kind}\n{'=' * 64}")
 
     with step("topic", f"Pick today's topic ({cfg['trends'].get('mode', 'theme')} mode, slot {slot})"):
         topic = {"topic": None, "source": "offline", "headlines": []}
@@ -47,7 +57,6 @@ def run_channel(channel_id: str, offline: bool = False, no_upload: bool = False)
         log(f"   source: {script['source']} | {len(script['scenes'])} scenes | "
             f"~{sum(len(s.split()) for s in script['scenes'])} words")
         log(f"   title: {script['title']}")
-
     with step("tts", "Synthesize neural voiceover"):
         voice_mp3, words, _ = tts.synthesize(cfg, script, work)
 
@@ -106,6 +115,8 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="render but never upload")
     ap.add_argument("--offline", action="store_true", help="skip trends + AI, use banks")
     ap.add_argument("--no-upload", action="store_true", help="render + metadata only")
+    ap.add_argument("--mode", choices=["auto", "short", "video"], default="auto",
+                    help="force render mode (auto: last slot of the day = long-form video)")
     args = ap.parse_args()
 
     if args.dry_run:
@@ -116,7 +127,8 @@ def main() -> int:
     failures = []
     for cid in ids:
         try:
-            run_channel(cid, offline=args.offline, no_upload=args.no_upload)
+            run_channel(cid, offline=args.offline, no_upload=args.no_upload,
+                        mode_override=args.mode)
         except Exception:
             log(f"\n❌ channel '{cid}' FAILED:\n{traceback.format_exc()}")
             failures.append(cid)

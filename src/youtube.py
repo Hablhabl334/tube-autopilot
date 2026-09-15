@@ -10,8 +10,10 @@ works via the global YT_CLIENT_ID / YT_CLIENT_SECRET fallbacks — in that
 case all channels share ONE 10,000-unit pool and the local quota ledger
 keeps the network inside it.
 
-Quota math: 1 upload = 1,600 units, thumbnail = 50 → 3 uploads/channel
-on a personal project = 4,950 of 10,000. Comfortably free.
+Quota math: 1 upload = 1,600 units, thumbnail = 50 → 5 uploads/channel
+(4 Shorts + 1 long-form video) = 8,250 of the 10,000 personal-project cap.
+Comfortably free; the local ledger blocks anything past DAILY_LIMIT and the
+YouTube API audit form can raise the cap if ever needed.
 """
 from __future__ import annotations
 
@@ -29,7 +31,7 @@ TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 UPLOAD_UNITS = 1600
 THUMB_UNITS = 50
-DAILY_LIMIT = 9200          # safety margin under the 10,000 hard cap
+DAILY_LIMIT = 9950          # hard stop under the 10,000 cap (5 uploads = 8,250)
 
 
 def quota_scope(cfg: dict) -> str:

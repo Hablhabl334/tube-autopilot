@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from .config import H, W, font_path
+from .config import font_path, frame_size
 from .utils import clean_text
 
 
@@ -44,8 +44,11 @@ def _vertical_gradient(size: tuple[int, int], stops: list[tuple[int, int, int]])
 
 
 def make_backgrounds(cfg: dict, n: int, out_dir: Path, seed: int = 0) -> list[Path]:
-    """n variants of the channel background, each subtly different."""
+    """n variants of the channel background, each subtly different.
+    Renders at the channel's current frame size (vertical Shorts or the
+    16:9 long-form canvas) so both formats stay perfectly on-brand."""
     rng = random.Random(seed)
+    W, H = frame_size(cfg)  # shadows module constants with the right canvas
     pal = cfg["palette"]
     top, mid, bot = _hex2rgb(pal["bg_top"]), _hex2rgb(pal["bg_mid"]), _hex2rgb(pal["bg_bottom"])
     accent = _hex2rgb(pal["accent"])
@@ -151,6 +154,9 @@ def _shadow_text(draw, xy, text, font, fill, shadow=(0, 0, 0, 210), off=8):
 def make_thumbnail(cfg: dict, script: dict, out_path: Path, variant: int = 0) -> Path:
     """1280x720 branded thumbnail — 3 rotating layouts.
 
+    (Same 16:9 canvas for Shorts and long-form videos — YouTube uses it for
+    both. The corner chip tells viewers which format to expect.)
+
     variant 0: centered hero headline, one word highlighted with the accent color
     variant 1: giant-number stack (facts-style) with diagonal accent slash
     variant 2: split-band — big text up top, accent band with channel name below
@@ -158,6 +164,7 @@ def make_thumbnail(cfg: dict, script: dict, out_path: Path, variant: int = 0) ->
     img, draw, accent, (TW, TH) = _thumb_base(cfg)
     pal = cfg["palette"]
     text = clean_text(script.get("thumbnail_text") or script.get("title", "WATCH NOW"))[:34].upper()
+    chip = "FULL VIDEO" if cfg.get("mode") == "video" else "DAILY DROP"
 
     black_font = str(font_path("Archivo Black"))
 
@@ -199,7 +206,7 @@ def make_thumbnail(cfg: dict, script: dict, out_path: Path, variant: int = 0) ->
         draw = ImageDraw.Draw(img)
         # brand name auto-shrinks so name + tag ALWAYS fit side by side
         name = cfg["display_name"].upper()
-        tag = "DAILY DROP"
+        tag = chip
         tag_font = ImageFont.truetype(black_font, 40)
         tag_w = draw.textlength(tag, font=tag_font)
         size = 76
@@ -256,7 +263,7 @@ def make_thumbnail(cfg: dict, script: dict, out_path: Path, variant: int = 0) ->
         draw.text((88, 62), badge_text, font=label_font, fill=(10, 10, 10, 255))
         # bottom-right chip
         tag_font = ImageFont.truetype(black_font, 38)
-        tag = "DAILY DROP"
+        tag = chip
         tw = draw.textlength(tag, font=tag_font)
         draw.rounded_rectangle([TW - tw - 104, TH - 92, TW - 56, TH - 40], radius=12,
                                fill=accent + (255,))

@@ -42,8 +42,15 @@ def _load_env_files() -> None:
 
 _load_env_files()
 
-W, H, FPS = 1080, 1920, 30
+W, H, FPS = 1080, 1920, 30          # vertical Shorts
+VW, VH = 1920, 1080                 # 16:9 long-form videos
 CHANNEL_IDS = ["mindset", "facts", "tech", "money"]
+
+
+def frame_size(cfg: dict) -> tuple[int, int]:
+    """Render size for this run: Shorts are 1080x1920 vertical; the daily
+    long-form video (cfg['mode'] == 'video') renders 1920x1080 landscape."""
+    return (VW, VH) if cfg.get("mode") == "video" else (W, H)
 
 _FONT_FILES = {
     "Anton": FONTS_DIR / "Anton-Regular.ttf",
@@ -78,6 +85,9 @@ def load_channel(channel_id: str) -> dict:
     cfg.setdefault("hashtags", ["#shorts"])
     cfg.setdefault("title_patterns", [])
     cfg.setdefault("bokeh", 24)
+    cfg.setdefault("daily_uploads", 1)
+    cfg.setdefault("longform_slot", 0)      # 0 = no daily long-form video
+    cfg.setdefault("mode", "short")
     return cfg
 
 

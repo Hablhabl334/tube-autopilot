@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .config import font_path
+from .config import font_path, frame_size
 from .utils import clean_text
 
 
@@ -57,17 +57,25 @@ def build_ass(script: dict, words: list[dict], cfg: dict, out_path: Path) -> Pat
     """Write the .ass subtitle file with 2-3 word chunks, uppercase."""
     family = cfg.get("caption_font", "Anton")
     font_path(family)  # fail early if no font at all
-    size = cfg.get("caption_size", 92)
+    video = cfg.get("mode") == "video"
+    res_x, res_y = frame_size(cfg)
+    if video:
+        # landscape: smaller captions, anchored near the bottom bar
+        size = int(cfg.get("caption_size", 92) * 0.74)
+        margin_v = 96
+    else:
+        size = cfg.get("caption_size", 92)
+        margin_v = 470
 
     header = f"""[Script Info]
 ScriptType: v4.00+
-PlayResX: 1080
-PlayResY: 1920
+PlayResX: {res_x}
+PlayResY: {res_y}
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,{family},{size},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,2,0,1,7,3,2,70,70,470,1
+Style: Cap,{family},{size},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,2,0,1,7,3,2,70,70,{margin_v},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

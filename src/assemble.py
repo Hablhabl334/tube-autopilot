@@ -10,24 +10,25 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from .config import FPS, H, W, FONTS_DIR
+from .config import FPS, FONTS_DIR, frame_size
 from .utils import ffmpeg, ffprobe_duration, log
 
 ZOOM_MAX = 1.16
 
 
-def _scene_clip(bg: Path, dur: float, out: Path, zoom_in: bool, crf: int = 21) -> None:
+def _scene_clip(bg: Path, dur: float, out: Path, zoom_in: bool,
+                w: int, h: int, crf: int = 21) -> None:
     frames = max(10, round(dur * FPS))
     zr = f"{(ZOOM_MAX - 1.0) / frames:.6f}"
     if zoom_in:
         zexpr = f"min(zoom+{zr},{ZOOM_MAX})"
     else:
         zexpr = f"if(eq(on,0),{ZOOM_MAX},max(1.001,zoom-{zr}))"
-    sw, sh = int(W * 1.25), int(H * 1.25)
+    sw, sh = int(w * 1.25), int(h * 1.25)
     vf = (
         f"[0:v]scale={sw}:{sh},"
         f"zoompan=z='{zexpr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        f"d={frames}:s={W}x{H}:fps={FPS},format=yuv420p[v]"
+        f"d={frames}:s={w}x{h}:fps={FPS},format=yuv420p[v]"
     )
     ffmpeg(["-i", str(bg), "-filter_complex", vf, "-map", "[v]",
             "-frames:v", str(frames), "-c:v", "libx264", "-preset", "veryfast",
@@ -36,19 +37,28 @@ def _scene_clip(bg: Path, dur: float, out: Path, zoom_in: bool, crf: int = 21) -
 
 def render(cfg: dict, work: Path, scene_times: list[tuple[float, float]],
            backgrounds: list[Path], ass_path: Path, voice: Path, music: Path) -> Path:
-    # 1. scene clips
+    video = cfg.get("mode") == "video"
+    w, h = frame_size(cfg)
+    # 1. scene clips — each clip runs until the NEXT scene starts, so the
+    #    body timeline stays identical to the voice timeline (sentence
+    #    pauses included). Without this, concat squeezes the pauses out,
+    #    the body ends seconds before the voice, and -shortest would cut
+    #    the narration tail mid-word.
     clips = []
+    n = len(scene_times)
     for i, (start, end) in enumerate(scene_times):
-        dur = end - start
+        dur = (scene_times[i + 1][0] - start) if i + 1 < n else (end - start)
+        dur = max(dur, 0.4)
         bg = backgrounds[i % len(backgrounds)]
         clip = work / f"scene_{i:02d}.mp4"
-        _scene_clip(bg, dur, clip, zoom_in=(i % 2 == 0))
+        _scene_clip(bg, dur, clip, zoom_in=(i % 2 == 0), w=w, h=h)
         clips.append(clip)
-        log(f"   scene {i + 1}/{len(scene_times)}: {dur:.1f}s {'zoom-in' if i % 2 == 0 else 'zoom-out'}")
+        log(f"   scene {i + 1}/{n}: {dur:.1f}s {'zoom-in' if i % 2 == 0 else 'zoom-out'}")
 
-    # tail card: hold last background 0.8s so the video never cuts mid-word
+    # tail card: hold last background 1.5s so the outro always fully lands
     tail = work / "scene_tail.mp4"
-    _scene_clip(backgrounds[(len(scene_times)) % len(backgrounds)], 0.8, tail, zoom_in=True)
+    _scene_clip(backgrounds[(len(scene_times)) % len(backgrounds)], 1.5, tail,
+                zoom_in=True, w=w, h=h)
 
     # 2. concat
     lst = work / "concat.txt"
@@ -73,6 +83,8 @@ def render(cfg: dict, work: Path, scene_times: list[tuple[float, float]],
 
     dur = ffprobe_duration(str(final))
     log(f"   final: {final.name} | {dur:.1f}s | {final.stat().st_size / 1e6:.1f} MB")
-    if not (12.0 <= dur <= 65.0):
-        raise RuntimeError(f"final duration {dur:.1f}s outside healthy Shorts range 12-65s")
+    lo, hi = (40.0, 220.0) if video else (12.0, 65.0)
+    if not (lo <= dur <= hi):
+        kind = "long-form video" if video else "Shorts"
+        raise RuntimeError(f"final duration {dur:.1f}s outside healthy {kind} range {lo}-{hi}s")
     return final

@@ -33,24 +33,25 @@ SCHEMA_HINT = """{
 
 
 def write_script(cfg: dict, topic: dict, rng: random.Random) -> dict:
+    video = cfg.get("mode") == "video"
     key = gemini_key()
     if key:
         for attempt in (1, 2):
             try:
-                data = _gemini(cfg, topic, key, strict=(attempt == 2))
-                if _validate(cfg, data):
+                data = _gemini(cfg, topic, key, strict=(attempt == 2), video=video)
+                if _validate(cfg, data, video=video):
                     data["source"] = "gemini"
                     data["topic"] = topic["topic"]
                     return data
                 log("   ⚠ Gemini output failed validation, retrying…")
             except Exception as e:
                 log(f"   ⚠ Gemini attempt {attempt} failed: {type(e).__name__}: {e}")
-    data = _from_bank(cfg, topic, rng)
+    data = _from_bank(cfg, topic, rng, video=video)
     data["source"] = "bank"
     return data
 
 
-def _gemini(cfg: dict, topic: dict, key: str, strict: bool) -> dict:
+def _gemini(cfg: dict, topic: dict, key: str, strict: bool, video: bool = False) -> dict:
     from google import genai
 
     persona = PERSONAS.get(cfg["niche"], "a viral YouTube Shorts channel")
@@ -62,15 +63,28 @@ def _gemini(cfg: dict, topic: dict, key: str, strict: bool) -> dict:
     memory_block = f"Performance memory (what your audience rewarded last week): {memory}.\n" if memory else ""
     topic_str = topic.get("topic") or "today's theme"
 
-    prompt = f"""You are the head writer for "{cfg['display_name']}', {persona}.
-Write one YouTube Shorts script (about 40 seconds, ~95-110 spoken words).
+    if video:
+        shape = """Write one long-form YouTube video script (about 100-120 seconds,
+~240-290 spoken words).
 
-Topic: {topic_str}
-{context}{memory_block}
+Hard rules:
+- hook: max 10 words, stops the scroll instantly
+- 12 to 14 scenes, each 15-24 words, simple spoken language (grade 6 reading level)
+- build a mini-arc: setup, escalation, payoff
+- outro: max 14 words, asks for a follow or save"""
+    else:
+        shape = """Write one YouTube Shorts script (about 40 seconds, ~95-110 spoken words).
+
 Hard rules:
 - hook: max 8 words, stops the scroll instantly
 - 5 or 6 scenes, each 12-22 words, simple spoken language (grade 6 reading level)
-- outro: max 12 words, asks for a follow or save
+- outro: max 12 words, asks for a follow or save"""
+
+    prompt = f"""You are the head writer for "{cfg['display_name']}', {persona}.
+{shape}
+
+Topic: {topic_str}
+{context}{memory_block}
 - no hashtags or emojis inside hook/scenes/outro
 - title: max 60 characters, specific and curiosity-driven, never clickbait lies
 - tags: 10-15 short lowercase tags
@@ -89,14 +103,20 @@ Return ONLY valid JSON matching this schema:
     return json.loads(resp.text)
 
 
-def _validate(cfg: dict, data: dict) -> bool:
+def _validate(cfg: dict, data: dict, video: bool = False) -> bool:
     try:
         scenes = [clean_text(s) for s in data["scenes"] if clean_text(s)]
         words = sum(len(s.split()) for s in scenes)
-        if not (3 <= len(scenes) <= 8):
-            return False
-        if not (45 <= words <= 160):
-            return False
+        if video:
+            if not (9 <= len(scenes) <= 18):
+                return False
+            if not (150 <= words <= 400):
+                return False
+        else:
+            if not (3 <= len(scenes) <= 8):
+                return False
+            if not (45 <= words <= 160):
+                return False
         if not (5 <= len(data["title"]) <= 90):
             return False
         if not data.get("hook") or not data.get("outro"):
@@ -116,19 +136,91 @@ def _validate(cfg: dict, data: dict) -> bool:
         return False
 
 
-def _from_bank(cfg: dict, topic: dict, rng: random.Random) -> dict:
+def _longform_from_bank(cfg: dict, topic: dict, rng: random.Random) -> dict:
+    """Stitch several bank entries into one ~100s long-form script.
+
+    Reuses the existing single-Short banks as building blocks, so the
+    long-form video also works fully offline (no Gemini key required).
+    """
     niche = cfg["niche"]
     hint = intelligence.style_hint(cfg["id"])
-    if niche == "motivation":
-        data = bank.motivation_bank(rng, style_hint=hint)
-    elif niche == "facts":
-        data = bank.facts_bank(rng, topic.get("topic"), style_hint=hint)
-    elif niche == "tech":
-        data = bank.tech_bank(rng, topic.get("headlines", []), style_hint=hint)
+
+    if niche == "facts":
+        picks = rng.sample(bank.FACTS, 10)
+        scenes = [f"Fact {i}: {p}" for i, p in enumerate(picks, 1)]
+        title = bank._biased(rng, [
+            "10 Facts That Sound Fake (All True)",
+            "10 True Facts Nobody Believes At First",
+            "10 Facts That Break Your Brain Slowly",
+        ], hint)
+        thumb = "10 REAL FACTS"
     elif niche == "money":
-        data = bank.money_bank(rng, style_hint=hint)
+        rules = rng.sample(bank.MONEY_RULES, 8)
+        scenes = [f"Rule {i}: {r}" for i, r in enumerate(rules, 1)]
+        title = bank._biased(rng, [
+            "8 Money Rules That Quietly Build Wealth",
+            "8 Money Rules Schools Skip Completely",
+            "The 8 Money Rules I'd Teach My Younger Self",
+        ], hint)
+        thumb = "8 MONEY RULES"
+    elif niche == "tech":
+        scenes = []
+        for h in (topic.get("headlines") or [])[:4]:
+            h = h.strip().rstrip(".")
+            if h:
+                scenes.append(f"In AI news today: {h}.")
+        while len(scenes) < 10:
+            scenes.append(f"Quick fact: {rng.choice(bank.TECH_FALLBACK_FACTS)}")
+        scenes = scenes[:11]
+        title = bank._biased(rng, [
+            "The AI News You Missed Today",
+            "Today In AI: Everything That Matters",
+        ], hint)
+        thumb = "AI NEWS DROP"
+    else:  # motivation
+        quotes = rng.sample(bank.QUOTES, 4)
+        scenes = []
+        for q, a in quotes:
+            scenes.append(q)
+            scenes.append(f"{a} said that for a reason.")
+            scenes.append(rng.choice(bank.MOTIVATION_LESSONS))
+        title = bank._biased(rng, [
+            "4 Quotes That Will Rewrite Your Standards",
+            "4 Quotes Worth Hearing Every Single Week",
+            "The 4 Quotes That Change How You Work",
+        ], hint)
+        thumb = "4 POWER QUOTES"
+
+    hooks = {"motivation": bank.MOTIVATION_HOOKS, "facts": bank.FACTS_HOOKS,
+             "tech": bank.TECH_HOOKS, "money": bank.MONEY_HOOKS}
+    outros = {"motivation": bank.MOTIVATION_OUTROS, "facts": bank.FACTS_OUTROS,
+              "tech": bank.TECH_OUTROS, "money": bank.MONEY_OUTROS}
+    return {
+        "hook": rng.choice(hooks.get(niche, bank.FACTS_HOOKS)),
+        "scenes": scenes,
+        "outro": rng.choice(outros.get(niche, bank.FACTS_OUTROS)),
+        "title": title,
+        "thumbnail_text": thumb,
+        "topic": f"long-form {niche} compilation",
+    }
+
+
+def _from_bank(cfg: dict, topic: dict, rng: random.Random, video: bool = False) -> dict:
+    if video:
+        data = _longform_from_bank(cfg, topic, rng)
     else:
-        data = bank.facts_bank(rng, topic.get("topic"), style_hint=hint)
+        niche = cfg["niche"]
+        hint = intelligence.style_hint(cfg["id"])
+        if niche == "motivation":
+            data = bank.motivation_bank(rng, style_hint=hint)
+        elif niche == "facts":
+            data = bank.facts_bank(rng, topic.get("topic"), style_hint=hint)
+        elif niche == "tech":
+            data = bank.tech_bank(rng, topic.get("headlines", []), style_hint=hint)
+        elif niche == "money":
+            data = bank.money_bank(rng, style_hint=hint)
+        else:
+            data = bank.facts_bank(rng, topic.get("topic"), style_hint=hint)
     data.setdefault("description", cfg.get("description_cta", ""))
     data.setdefault("tags", [h.lstrip("#") for h in cfg["hashtags"]][:10])
     data["thumbnail_text"] = data.get("thumbnail_text", "MUST WATCH")[:30]

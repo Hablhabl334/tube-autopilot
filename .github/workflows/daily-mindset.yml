@@ -1,15 +1,18 @@
 name: daily-mindset
 
-# CHANNEL 1 — Zenith Mindset (motivational Shorts)
-# 3 posts/day at niche-prime times (10:30 / 16:30 / 01:30 UTC =
-# 05:30 / 11:30 / 20:30 New York — morning scroll, midday, evening wind-down).
-# Each trigger ships the NEXT video of the day (slot-aware, no repeats).
+# CHANNEL — Zenith Mindset : 5 posts/day (4 Shorts + 1 long-form video)
+# Slots at 05:30 09:30 13:30 17:30 21:30 UTC.
+# Each trigger ships the NEXT video of the day (slot-aware, no repeats);
+# the day's 5th slot (21:30 UTC) renders as a 16:9 long-form video
+# (= 9:30pm Cairo summer / 5:30pm New York — US evening prime).
 
 on:
   schedule:
-    - cron: "30 10 * * *"
-    - cron: "30 16 * * *"
-    - cron: "30 1 * * *"
+    - cron: "30 5 * * *"
+    - cron: "30 9 * * *"
+    - cron: "30 13 * * *"
+    - cron: "30 17 * * *"
+    - cron: "30 21 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -27,9 +30,9 @@ concurrency:
 
 jobs:
   produce:
-    name: Mindset daily Short
+    name: Zenith Mindset daily post
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       YT_CLIENT_ID_MINDSET: ${{ secrets.YT_CLIENT_ID_MINDSET || secrets.YT_CLIENT_ID }}

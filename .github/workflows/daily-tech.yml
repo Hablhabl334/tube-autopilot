@@ -1,14 +1,18 @@
 name: daily-tech
 
-# CHANNEL 2 — AI Chronicle (AI/tech news Shorts)
-# 3 posts/day at news-prime times (09:30 / 13:30 / 21:30 UTC =
-# 04:30 / 08:30 / 16:30 New York — early news, morning commute, evening recap).
+# CHANNEL — AI Chronicle : 5 posts/day (4 Shorts + 1 long-form video)
+# Slots at 05:15 09:15 13:15 17:15 21:15 UTC.
+# Each trigger ships the NEXT video of the day (slot-aware, no repeats);
+# the day's 5th slot (21:15 UTC) renders as a 16:9 long-form video
+# (= 9:30pm Cairo summer / 5:30pm New York — US evening prime).
 
 on:
   schedule:
-    - cron: "30 9 * * *"
-    - cron: "30 13 * * *"
-    - cron: "30 21 * * *"
+    - cron: "15 5 * * *"
+    - cron: "15 9 * * *"
+    - cron: "15 13 * * *"
+    - cron: "15 17 * * *"
+    - cron: "15 21 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -26,9 +30,9 @@ concurrency:
 
 jobs:
   produce:
-    name: Tech daily Short
+    name: AI Chronicle daily post
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       YT_CLIENT_ID_TECH: ${{ secrets.YT_CLIENT_ID_TECH || secrets.YT_CLIENT_ID }}

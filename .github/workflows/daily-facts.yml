@@ -1,14 +1,18 @@
 name: daily-facts
 
-# CHANNEL 4 — Fact Vault (mind-blowing facts Shorts)
-# 3 posts/day at entertainment-prime times (12:30 / 17:30 / 00:30 UTC =
-# 07:30 / 12:30 / 19:30 New York — breakfast, lunch scroll, prime time).
+# CHANNEL — Fact Vault : 5 posts/day (4 Shorts + 1 long-form video)
+# Slots at 05:05 09:05 13:05 17:05 21:05 UTC.
+# Each trigger ships the NEXT video of the day (slot-aware, no repeats);
+# the day's 5th slot (21:05 UTC) renders as a 16:9 long-form video
+# (= 9:30pm Cairo summer / 5:30pm New York — US evening prime).
 
 on:
   schedule:
-    - cron: "30 12 * * *"
-    - cron: "30 17 * * *"
-    - cron: "30 0 * * *"
+    - cron: "05 5 * * *"
+    - cron: "05 9 * * *"
+    - cron: "05 13 * * *"
+    - cron: "05 17 * * *"
+    - cron: "05 21 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -26,9 +30,9 @@ concurrency:
 
 jobs:
   produce:
-    name: Facts daily Short
+    name: Fact Vault daily post
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       YT_CLIENT_ID_FACTS: ${{ secrets.YT_CLIENT_ID_FACTS || secrets.YT_CLIENT_ID }}

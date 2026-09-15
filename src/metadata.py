@@ -115,7 +115,9 @@ def pick_title(cfg: dict, script: dict, topic: dict) -> str:
     cands = _title_candidates(cfg, script, topic)
     best = max(cands, key=lambda t: score_title(t, cfg))
     title = clamp(best, 95)
-    if "#shorts" not in title.lower() and len(title) <= 86:
+    # #shorts only makes sense on actual Shorts — long-form videos keep clean titles
+    if (cfg.get("mode") != "video" and "#shorts" not in title.lower()
+            and len(title) <= 86):
         title += " #shorts"
     return title
 
@@ -170,8 +172,11 @@ def build_description(cfg: dict, script: dict, topic: dict) -> str:
         desc_lines.append(f"Today's topic: {clamp(topic['topic'], 90)}")
         desc_lines.append("")
 
-    # 6 — hashtags (first 3 carry the most weight)
-    hashy = " ".join(cfg["hashtags"][:8])
+    # 6 — hashtags (first 3 carry the most weight); #shorts only on Shorts
+    tags_in = cfg["hashtags"]
+    if cfg.get("mode") == "video":
+        tags_in = [h for h in tags_in if h.lower() != "#shorts"]
+    hashy = " ".join(tags_in[:8])
     desc_lines.append(hashy)
 
     # 7 — transparent production note (YouTube AI-content best practice)
